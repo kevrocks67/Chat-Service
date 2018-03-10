@@ -16,6 +16,8 @@ import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.awt.Font;
+
 import java.awt.FlowLayout;
 
 import javax.swing.BoxLayout;
@@ -29,10 +31,11 @@ import javax.swing.ScrollPaneConstants;
 
 //TODO Fix sizing issue
 //TODO Implement autoscroll
-//TODO Russian text returns "?" for other clients, possible encoding issue
 //TODO Figure out communication with python server or build new one
 //TODO Encrypt UDP Packets using DTLS(OpenSSL?)
 //TODO Set up a better looking top panel
+//TODO Add friends list/list of people online
+//TODO Add name of person youre talking to 
 //TODO Add list of people logged in for group chats
 //TODO Add document sending function        Use these functions
 //TODO Add picture sending function         by uploading and downloading
@@ -99,6 +102,7 @@ public class ChatClient extends JFrame{
         msg_area.setEditable(false);
         msg_area.setFocusable(false);
         msg_area.setLineWrap(true);
+        msg_area.setFont(new Font("SansSerif", Font.ROMAN_BASELINE, 12));
         msg_area_scroll = new JScrollPane(msg_area);
         msg_area_scroll.setVerticalScrollBarPolicy(
                         ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
@@ -167,18 +171,20 @@ public class ChatClient extends JFrame{
     //Handles sending of message to server/other clients
     private void send(){
         String raw_msg = msg_box.getText();
-        String msg_to_send = alias+": "+raw_msg;
+        String msg_to_send = alias+": "+raw_msg+alias.length();
         //Checks if there is a message to send and not just empty spaces
         //if(!raw_msg.isEmpty() && !raw_msg.startsWith(" ")){
         if(raw_msg.trim().length() > 0){
-            DatagramPacket dp = new DatagramPacket(msg_to_send.getBytes(),
-                                                   msg_to_send.length(),
-                                                   serverIP, port);
             try{
+                DatagramPacket dp = new DatagramPacket(msg_to_send
+                                                        .getBytes("UTF-8"),
+                                                   msg_to_send.length(),
+                                                   serverIP, port);    
                 udp_socket.send(dp); 
             }catch(Exception e){
             }
-            msg_area.append(msg_to_send+'\n');
+            msg_area.append(msg_to_send
+                            .substring(0,msg_to_send.length()-1) +'\n');
             msg_box.setText("");
         }
         else{
@@ -191,10 +197,11 @@ public class ChatClient extends JFrame{
         public void run(){
             while(true){
                 try{
-                    byte[] buf = new byte[1024];
-                    DatagramPacket dp = new DatagramPacket(buf, 1024);
+                    byte[] buf = new byte[2048];
+                    DatagramPacket dp = new DatagramPacket(buf, 2048);
                     udp_socket.receive(dp);
-                    String msg = new String(dp.getData(), 0, dp.getLength());
+                    String msg = new String(dp.getData(), 0, 
+                                    dp.getLength(),"UTF-8");
                     msg_area.append(msg+'\n');
                 }catch(IOException e){
                     System.out.println("Error receiving packet: "+e);
